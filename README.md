@@ -97,6 +97,8 @@ Edit any of these by hand; the next lesson run reads them. The app publishes a c
 
 ## Credits
 
+The `/teach` flow (`skills/teach`) started from [Matt Pocock's teach skill](https://x.com/mattpocockuk/status/2063988995692900439).
+
 The Steer live lab (`lib/lab`) is adapted from [chuanqisun/spaceship](https://github.com/chuanqisun/spaceship)
 (MIT, see `lib/lab/LICENSE`).
 
