@@ -1,0 +1,812 @@
+/*
+ * The steer-live lab's styles (lab.ts builds the markup). Upstream's index.html styled a whole page; here everything sits under
+ * `.steer-lab`, the element a lab runs in, so a page can hold the lab without it styling the page or the page restyling it.
+ * Names CSS keeps page-wide (registered properties, keyframes, highlights) start with `lab-`.
+ */
+@property --lab-fill {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+/* How full the main knob's buffer is, from 0 to 1. */
+@property --lab-buffer {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes lab-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+@keyframes lab-pulse {
+  to {
+    opacity: 0.3;
+  }
+}
+
+.steer-lab {
+  color-scheme: dark;
+  /* White ink in five steps on black; orange only for what is changing right now, by the hand or by the model. */
+  --bg: #000;
+  --ink: #fff;
+  --ink-2: rgb(255 255 255 / 0.64);
+  --ink-3: rgb(255 255 255 / 0.4);
+  --ink-4: rgb(255 255 255 / 0.22);
+  --ink-5: rgb(255 255 255 / 0.1);
+  --hot: #ff5a1f;
+  --hot-wash: rgb(255 90 31 / 0.38);
+  /* Each box covering a word adds one layer, so overlaps read darker. */
+  --attention: rgb(255 255 255 / 0.14);
+  --hair: 1px;
+  --stroke: 1.5px;
+  --selected-stroke: 3px;
+  --dash: 3 3;
+  --text-size: 11px;
+  --line: 18px;
+  /* Read by the HUD to measure its labels. */
+  --hud-size: 10px;
+  --hud-line: 14px;
+  --numeral-size: 9px;
+  --tray-height: 18px;
+  --padding: 32px;
+  /* Room each side of the column for pinned future knobs and their labels. */
+  --margin: 24ch;
+  --knob: 14px;
+  --knob-future: 12px;
+  --gap: 8px;
+  --fast: 120ms;
+  --settle: 300ms;
+  /* How long an orange trace takes to fade. */
+  --fade: 450ms;
+  --pin: 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dimmed: 0.3;
+  /* The ruler beside the column: one row per line, each this tall like the text. */
+  --rail-width: 144px;
+  position: relative;
+  overflow: hidden;
+  outline: none;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    var(--text-size) "JetBrains Mono Variable",
+    monospace;
+  -webkit-font-smoothing: antialiased;
+  /*
+   * What a page around it may pass down, reset to the browser's defaults the lab was written for. Spacing matters most: the text is
+   * laid out by measuring it on a canvas, which knows only the font.
+   */
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-align: start;
+  text-indent: 0;
+  text-transform: none;
+  white-space: normal;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+
+  /*
+   * The board around it sets every element to border-box with no outline and no text selection. The doubled class outranks such
+   * page-wide rules, so the lab keeps the browser's defaults it was written for.
+   */
+  &.steer-lab *,
+  &.steer-lab *::before,
+  &.steer-lab *::after {
+    box-sizing: content-box;
+  }
+  &.steer-lab :focus-visible {
+    outline: revert;
+  }
+
+  [data-dimmed] {
+    opacity: var(--dimmed);
+  }
+  /* The page scrolls in the lab's box, and the tray stays at its foot. */
+  .lab-scroll {
+    position: absolute;
+    inset: 0;
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .lab-page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+  .text {
+    flex: none;
+    width: clamp(30ch, 100% - 2 * (var(--margin) + var(--rail-width)), 64ch);
+    margin-inline: auto;
+    padding-block: var(--padding);
+    white-space: pre;
+    line-height: var(--line);
+    touch-action: none;
+    text-underline-position: under;
+    -webkit-user-select: text;
+    user-select: text;
+
+    &::selection,
+    *::selection {
+      background: var(--hot-wash);
+      color: inherit;
+    }
+  }
+  /* Left rail: a ruler row per line with each box's bracket, its keyword's rank and relevance to the tip, and a meter of the line's connection to the focus. */
+  .rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-auto-rows: var(--line);
+    align-content: start;
+    width: var(--rail-width);
+    font-size: var(--hud-size);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    user-select: none;
+
+    .row {
+      display: grid;
+      grid-template-columns: 2ch 6px 5ch 1fr 10px;
+      column-gap: 6px;
+      align-items: center;
+    }
+    .num {
+      color: var(--ink-4);
+      font-size: var(--numeral-size);
+      text-align: end;
+    }
+    .kw {
+      display: flex;
+      justify-content: space-between;
+
+      i {
+        font-style: normal;
+        color: var(--ink-3);
+      }
+      b {
+        font-weight: inherit;
+      }
+      b[data-live] {
+        color: var(--hot);
+      }
+      .measuring {
+        color: var(--hot);
+        animation: lab-pulse 0.8s ease-in-out infinite alternate;
+      }
+    }
+    .row[data-active] .kw :is(i, b) {
+      color: var(--hot);
+    }
+    /* Ten steps of strength, lit from the text outward. */
+    .meter {
+      position: relative;
+      display: flex;
+      flex-direction: row-reverse;
+      gap: 1px;
+      height: 7px;
+
+      i {
+        flex: 1;
+        background: var(--ink-5);
+        transition: background-color var(--fade) ease-out;
+      }
+      /* Gray while the meters follow the knob's text; brighter while a hovered box is the focus. */
+      i[data-on] {
+        background: var(--ink-3);
+      }
+      /* A segment turning on or off flashes orange, then fades to its new state: the diff, animated. */
+      i[data-gained],
+      i[data-lost] {
+        background: var(--hot);
+        transition: none;
+      }
+    }
+    &[data-focus="box"] .meter i[data-on]:not([data-gained], [data-lost]) {
+      background: var(--ink-2);
+    }
+    /* One unit per line against the text, every fifth longer; the spine thickens beside the focus. */
+    .tick {
+      position: relative;
+      height: 100%;
+      border-right: var(--hair) solid var(--ink-5);
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 0;
+        width: 4px;
+        border-top: var(--hair) solid var(--ink-4);
+      }
+    }
+    .row[data-major] .tick::after {
+      width: 8px;
+      border-color: var(--ink-3);
+    }
+    .row[data-tip] .tick::after {
+      width: 8px;
+      border-top: var(--stroke) solid var(--ink);
+    }
+    .row[data-focus] .tick {
+      border-right: var(--stroke) solid var(--ink);
+    }
+    .brackets {
+      position: absolute;
+      inset: 0 auto 0 calc(2ch + 6px);
+      width: 6px;
+    }
+    .bracket {
+      position: absolute;
+      left: 0;
+      width: 4px;
+      border: var(--hair) solid var(--ink-3);
+      border-right: none;
+      transition: border-color var(--fast);
+
+      i {
+        position: absolute;
+        left: -3px;
+        width: 6px;
+        border-top: var(--stroke) solid var(--ink);
+      }
+      &[data-active],
+      &[data-active] i {
+        border-color: var(--hot);
+      }
+    }
+  }
+  .links {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+
+    > path {
+      fill: none;
+      stroke: var(--ink-2);
+      stroke-width: var(--hair);
+      transition: opacity var(--fast);
+    }
+
+    .attention-active-link {
+      stroke: var(--hot);
+      stroke-width: var(--stroke);
+    }
+
+    .future-links,
+    .future-tuned-link[data-choosing] {
+      stroke-dasharray: var(--dash);
+    }
+
+    .future-tuned-link {
+      stroke: var(--ink);
+    }
+  }
+  .future-hud {
+    pointer-events: none;
+
+    path {
+      fill: none;
+      stroke: var(--ink);
+      stroke-width: var(--hair);
+    }
+    [data-role="backdrop"] {
+      fill: var(--bg);
+      stroke: none;
+      opacity: 0.92;
+    }
+    [data-role="rim"][data-dashed] {
+      stroke-dasharray: var(--dash);
+    }
+    [data-role="ring"] {
+      stroke: var(--ink-5);
+    }
+    [data-role="minor"] {
+      stroke: var(--ink-3);
+    }
+    [data-role="ruler"] {
+      stroke: var(--ink-2);
+    }
+    [data-role="selected"] {
+      stroke: var(--hot);
+      stroke-width: var(--selected-stroke);
+    }
+    circle {
+      fill: var(--hot);
+      stroke: none;
+    }
+    rect[data-plate] {
+      fill: var(--hot);
+    }
+    text {
+      fill: var(--ink-2);
+      stroke: var(--bg);
+      stroke-width: 4px;
+      paint-order: stroke;
+      font-size: var(--hud-size);
+      line-height: var(--hud-line);
+
+      &[data-numeral] {
+        fill: var(--ink-3);
+        font-size: var(--numeral-size);
+      }
+      &[data-selected] {
+        fill: var(--bg);
+        stroke: none;
+      }
+      &[data-readout] {
+        fill: var(--ink);
+      }
+    }
+    [data-tone="dim"] {
+      fill: var(--ink-3);
+    }
+    [data-tone="live"] {
+      fill: var(--hot);
+    }
+  }
+  .knob {
+    --size: var(--knob);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--size);
+    height: var(--size);
+    padding: 0;
+    border: var(--hair) solid var(--ink);
+    border-radius: 50%;
+    background: conic-gradient(var(--hot) calc(var(--lab-fill, 0) * 1turn), transparent 0);
+    color: inherit;
+    font: inherit;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition:
+      opacity var(--fast),
+      border-color var(--settle);
+  }
+  .main-knob {
+    --arc: var(--ink);
+    /*
+     * Six segments on a ring between the pip and the rim, lit clockwise from twelve, one whole segment at a time, as the buffer past the knob fills;
+     * unlit ones stay faint. Three bars through the middle cut gaps of even width between them.
+     */
+    --gap-bar: transparent calc(50% - 0.75px), var(--bg) 0 calc(50% + 0.75px), transparent 0;
+    background:
+      radial-gradient(circle closest-side, var(--bg) 2.5px, transparent 3px 4.5px, var(--bg) 5px), linear-gradient(90deg, var(--gap-bar)),
+      linear-gradient(30deg, var(--gap-bar)), linear-gradient(150deg, var(--gap-bar)),
+      conic-gradient(var(--arc) calc(round(up, var(--lab-buffer), 1 / 6) * 1turn), var(--ink-5) 0);
+    transition:
+      opacity var(--fast),
+      border-color var(--settle),
+      --lab-buffer var(--settle);
+
+    /* A pip marks the exact caret. */
+    &::before {
+      content: "";
+      position: absolute;
+      inset: calc(50% - 1px);
+      border-radius: 50%;
+      background: var(--ink);
+    }
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border: var(--hair) solid var(--ink-3);
+      border-radius: 50%;
+      /* fades in as the hand nears the knob (set by the pointer), full on hover */
+      opacity: var(--near, 0);
+      scale: calc(0.7 + 0.3 * var(--near, 0));
+      transition:
+        opacity var(--fast),
+        scale var(--fast);
+    }
+    &:hover::after {
+      opacity: 1;
+      scale: 1;
+    }
+    &[data-generating] {
+      --arc: var(--hot);
+    }
+    &[data-generating]::after {
+      opacity: 1;
+      scale: 1;
+      border-color: transparent;
+      border-top-color: var(--hot);
+      animation: lab-spin 0.9s linear infinite;
+    }
+    /* The hold sweep takes the whole face while it runs. */
+    &[data-holding] {
+      border-color: var(--hot);
+      background: conic-gradient(var(--hot) calc(var(--lab-fill, 0) * 1turn), transparent 0);
+      transition: none;
+    }
+    &[data-dragging] {
+      border-color: var(--hot);
+      cursor: grabbing;
+      transition: none;
+
+      &::before {
+        background: var(--hot);
+      }
+      /* Reticle ticks beyond the ring. */
+      &::after {
+        inset: -9px;
+        border: none;
+        opacity: 1;
+        scale: 1;
+        animation: none;
+        background:
+          linear-gradient(var(--hot), var(--hot)) 50% 0 / 1px 5px no-repeat,
+          linear-gradient(var(--hot), var(--hot)) 50% 100% / 1px 5px no-repeat,
+          linear-gradient(var(--hot), var(--hot)) 0 50% / 5px 1px no-repeat,
+          linear-gradient(var(--hot), var(--hot)) 100% 50% / 5px 1px no-repeat;
+      }
+    }
+  }
+  .future {
+    --size: var(--knob-future);
+    --fill-color: var(--ink);
+    border-style: dashed;
+    background: conic-gradient(var(--fill-color) calc(var(--lab-fill, 0) * 1turn), var(--bg) 0);
+
+    > span {
+      position: absolute;
+      top: 50%;
+      left: calc(100% + var(--gap));
+      translate: 0 -50%;
+      white-space: nowrap;
+      pointer-events: none;
+      background: var(--bg);
+      font-size: var(--hud-size);
+      line-height: var(--hud-line);
+
+      &[hidden] {
+        display: none;
+      }
+
+      b {
+        font-weight: inherit;
+        color: var(--ink-3);
+      }
+    }
+
+    &[data-tuned] {
+      border-style: solid;
+    }
+
+    /* The menu is on its way. */
+    &[data-loading] {
+      border-color: var(--hot);
+    }
+
+    &[data-dragging] {
+      --fill-color: var(--hot);
+      border-color: var(--hot);
+      cursor: grabbing;
+      transition: none;
+    }
+
+    &[data-tracking],
+    &[data-pinned] {
+      --fill-color: var(--hot);
+      border-color: var(--hot);
+
+      > span b {
+        color: var(--hot);
+      }
+    }
+
+    &[data-dimmed] > span {
+      background: transparent;
+    }
+
+    &[data-tracking] {
+      transition:
+        --lab-fill var(--settle),
+        opacity var(--fast);
+    }
+
+    /* Moved into the right gutter once the text grew over it: it travels like a pin, still linked by its dashed line, until it pins. */
+    &[data-parked] {
+      transition:
+        translate var(--pin),
+        --lab-fill var(--settle),
+        opacity var(--fast);
+
+      > span {
+        width: max-content;
+        white-space: normal;
+        text-align: start;
+      }
+    }
+
+    &[data-pinned] {
+      cursor: default;
+      transition:
+        translate var(--pin),
+        --lab-fill var(--settle),
+        opacity var(--fast);
+
+      > span {
+        width: max-content;
+        white-space: normal;
+        text-align: start;
+        background: transparent;
+        pointer-events: auto;
+      }
+
+      &[data-side="left"] > span {
+        text-align: end;
+      }
+    }
+
+    &[data-side="left"] > span {
+      left: auto;
+      right: calc(100% + var(--gap));
+    }
+  }
+  /* Polybar-style modules in one centered row: model, text, steering, sound; a hairline between every field. Stays at the box's foot. */
+  .tray {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: var(--tray-height);
+    margin-top: auto;
+    padding-inline: calc(1.5 * var(--gap));
+    border-top: var(--hair) solid var(--ink-5);
+    background: var(--bg);
+    color: var(--ink-3);
+    font-size: var(--numeral-size);
+    line-height: var(--tray-height);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    .zone {
+      display: flex;
+
+      & + .zone {
+        border-left: var(--hair) solid var(--ink-5);
+      }
+    }
+    [data-field] {
+      padding-inline: var(--gap);
+
+      & + [data-field] {
+        border-left: var(--hair) solid var(--ink-5);
+      }
+    }
+    abbr {
+      margin-right: 0.5ch;
+      text-decoration: none;
+      cursor: help;
+    }
+    b {
+      display: inline-block;
+      margin-left: 0.5ch;
+      font-weight: inherit;
+      color: var(--ink);
+    }
+    abbr + b {
+      margin-left: 0;
+    }
+    small {
+      font-size: inherit;
+      color: var(--ink-3);
+    }
+
+    /* Every reading has a fixed width that fits its widest value, so the centered tray never shifts as digits come and go. */
+    [data-field="rate"] b,
+    [data-field="latency"] b {
+      width: 7ch;
+    }
+    [data-field="words"] b {
+      width: 9ch;
+    }
+    [data-field="boxes"] b,
+    [data-field="steering"] b,
+    [data-field="pinned"] b {
+      width: 2ch;
+    }
+
+    /* Streaming shows as the live rate and the growing buffer turning orange. */
+    .status[data-streaming] :is([data-field="rate"] b, [data-field="words"] small) {
+      color: var(--hot);
+    }
+  }
+  .status {
+    display: contents;
+  }
+  .sound-toggle {
+    padding: 0 var(--gap);
+    border: none;
+    border-left: var(--hair) solid var(--ink-5);
+    background: none;
+    /* brightens as the hand nears it */
+    color: color-mix(in srgb, var(--ink) calc(var(--near, 0) * 100%), var(--ink-2));
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    b {
+      width: 3ch;
+      margin-left: 0.5ch;
+      font-weight: inherit;
+      text-align: start;
+    }
+    &:hover {
+      color: var(--ink);
+    }
+    &[aria-pressed="false"] {
+      color: var(--ink-4);
+    }
+  }
+  /*
+   * The lab's pointer, for mice and pens (see text/pointer.ts): a crosshair at the hand, brackets on what it is near,
+   * and a steering vector while a press pulls the main knob. The OS pointer is hidden in the lab once it takes over.
+   */
+  &[data-cursor="custom"],
+  &[data-cursor="custom"] * {
+    cursor: none !important;
+  }
+  .cursor {
+    --x: -1000px;
+    --y: -1000px;
+    --line: var(--ink-5);
+    position: absolute;
+    inset: 0;
+    z-index: 1000;
+    overflow: hidden;
+    pointer-events: none;
+
+    /* orange while the hand changes something: dragging, or pulling the knob */
+    &[data-live] {
+      --line: rgb(255 90 31 / 0.3);
+    }
+    /* hairlines edge to edge, each leaving a 12px gap around the point */
+    .hairline {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .vertical {
+      bottom: 0;
+      width: 1px;
+      translate: var(--x) 0;
+      background: linear-gradient(to bottom, var(--line) calc(var(--y) - 6px), transparent 0 calc(var(--y) + 6px), var(--line) 0);
+    }
+    .horizontal {
+      right: 0;
+      height: 1px;
+      translate: 0 var(--y);
+      background: linear-gradient(to right, var(--line) calc(var(--x) - 6px), transparent 0 calc(var(--x) + 6px), var(--line) 0);
+    }
+    .marks {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+
+      path,
+      line {
+        fill: none;
+        stroke-width: var(--hair);
+      }
+      /* brackets at a block's defining corners, and a fainter contour around a block of several lines */
+      .corners {
+        stroke: var(--ink-2);
+      }
+      .contour {
+        stroke: var(--ink-2);
+        stroke-opacity: 0.35;
+      }
+      /* over text: where a selection would start */
+      .ibeam {
+        stroke: var(--ink-2);
+      }
+      /* past the knob: the way to the nearest target */
+      .tether {
+        stroke: var(--ink-3);
+        stroke-dasharray: var(--dash);
+      }
+      /* the attention box under the hand: orange, as a press there grabs it */
+      .grabbable :is(.corners, .contour) {
+        stroke: var(--hot);
+      }
+      /* what the hand is changing: a selection's ends and the words it will become, the word a pull has reached */
+      .live-marks :is(.corners, .contour, .ends) {
+        stroke: var(--hot);
+      }
+      :is(.vector, .vector-ticks) {
+        display: none;
+      }
+    }
+    &[data-steer="pulling"] .vector {
+      display: inline;
+      stroke: rgb(255 90 31 / 0.7);
+    }
+    &[data-steer="pulling"] .vector-ticks {
+      display: inline;
+      stroke: var(--hot);
+    }
+    &[data-steer="behind"] .vector {
+      display: inline;
+      stroke: var(--ink-4);
+      stroke-dasharray: var(--dash);
+    }
+    /* past the knob, where a press steers, a high-contrast dot marks the exact point: white, ringed in the page color so it reads over anything */
+    .dot {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
+      width: 5px;
+      height: 5px;
+      margin: -2.5px 0 0 -2.5px;
+      border-radius: 50%;
+      background: var(--ink);
+      box-shadow: 0 0 0 1.5px var(--bg);
+      translate: var(--x) var(--y);
+    }
+    /* the same dot over an attention box: it marks what a press would drag */
+    &:is([data-zone="ahead"], [data-zone="box"]) .dot {
+      display: block;
+    }
+    &:is([data-zone="ahead"], [data-zone="box"])[data-live] .dot {
+      background: var(--hot);
+    }
+    .readout {
+      position: absolute;
+      top: 0;
+      left: 0;
+      padding: 0 3px;
+      background: var(--bg);
+      white-space: nowrap;
+      font-size: var(--numeral-size);
+      line-height: 12px;
+      color: var(--ink-3);
+
+      b {
+        font-weight: inherit;
+        color: var(--ink);
+      }
+      &:empty {
+        display: none;
+      }
+    }
+    &[data-steer="pulling"] .vector-label b {
+      color: var(--hot);
+    }
+  }
+  &:not([data-cursor="custom"]) .cursor {
+    display: none;
+  }
+}
+
+/* Highlights are painted per element, so these reach only the text inside a lab. Names match lab.ts's (see highlights.ts). */
+.steer-lab ::highlight(lab-attention-word) {
+  text-decoration: underline var(--stroke) var(--ink);
+}
+.steer-lab ::highlight(lab-attention-word-active) {
+  text-decoration: underline var(--stroke) var(--hot);
+}
+.steer-lab ::highlight(lab-pinned-sentence) {
+  text-decoration: underline dashed var(--hair) var(--ink-2);
+}
+.steer-lab ::highlight(lab-attention-shade-1),
+.steer-lab ::highlight(lab-attention-shade-2),
+.steer-lab ::highlight(lab-attention-shade-3),
+.steer-lab ::highlight(lab-attention-shade-4),
+.steer-lab ::highlight(lab-attention-shade-5) {
+  background: var(--attention);
+}

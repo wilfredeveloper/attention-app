@@ -1,0 +1,747 @@
+/* Lesson reader + tutor margin. The tutor is set like the lessons' own
+   sidenotes: paper, hairline rules, Georgia answers, and the asked-about
+   passage marked in the lime highlighter. Classes are prefixed rd-. */
+
+.rd { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--paper); font-family: var(--font-display); color: var(--ink); }
+
+/* ---- Top bar ---- */
+.rd-bar { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 16px; border-bottom: 1px solid var(--rule); font-size: 0.82rem; flex: none; }
+.rd-bar a { color: var(--muted); text-decoration: none; white-space: nowrap; }
+.rd-bar a:hover { color: var(--ink); }
+.rd-bar-course { overflow: hidden; text-overflow: ellipsis; max-width: 30vw; }
+.rd-bar-title { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; padding-left: 14px; border-left: 1px solid var(--rule); }
+.rd-bar-nav { margin-left: auto; display: flex; align-items: center; gap: 16px; flex: none; }
+.rd-toggle { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border: 1px solid var(--ink); border-radius: 3px; background: transparent; color: var(--ink); font: 600 0.8rem/1 var(--font-display); cursor: pointer; }
+.rd-toggle::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--acid); border: 1px solid var(--ink); }
+.rd-toggle:hover, .rd-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.rd-toggle[aria-pressed="true"]::before { border-color: var(--acid); }
+
+/* ---- Body ---- */
+.rd-body { display: flex; flex: 1; min-height: 0; position: relative; }
+.rd-frame { flex: 1; min-width: 0; height: 100%; border: 0; background: var(--paper); }
+
+/* ---- Tutor margin ---- */
+.rd-panel { width: clamp(380px, 33vw, 480px); flex: none; display: flex; flex-direction: column; min-height: 0; background: var(--card); border-left: 1px solid var(--ink); animation: rd-in 0.18s ease-out; }
+@keyframes rd-in { from { transform: translateX(16px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .rd-panel { animation: none; } }
+@media (max-width: 900px) { .rd-panel { position: absolute; inset: 0 0 0 auto; width: min(100%, 440px); box-shadow: -24px 0 48px -24px rgba(25, 34, 31, 0.35); } }
+
+.rd-head { display: flex; align-items: baseline; gap: 18px; padding: 18px 22px 0; flex: none; }
+.rd-head h2 { font: 600 1.05rem/1 var(--font-display); letter-spacing: -0.02em; margin: 0; }
+.rd-tabs { display: flex; gap: 16px; margin-left: auto; }
+.rd-tab { border: 0; background: none; padding: 0 0 6px; font: 500 0.8rem/1 var(--font-display); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+.rd-tab:hover { color: var(--ink); }
+.rd-tab[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
+.rd-close { border: 0; background: none; padding: 0 0 6px; font: 400 1rem/1 var(--font-display); color: var(--muted); cursor: pointer; }
+.rd-close:hover { color: var(--ink); }
+.rd-panel button:focus-visible, .rd-bar :focus-visible, .rd-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.rd-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 22px 28px; border-top: 1px solid var(--rule); margin-top: 10px; }
+
+/* The asked-about passage: the reader's own highlighter stroke. */
+.rd-label { font: 500 0.75rem/1.3 var(--font-display); color: var(--muted); margin: 0 0 8px; }
+.rd-quote { margin: 0 0 6px; font: 400 1.06rem/1.6 var(--font-body); color: #19221f; }
+.rd-quote span { background: var(--acid); padding: 0.12em 0.2em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.rd-where { font: 400 0.75rem/1.3 var(--font-display); color: var(--muted); margin: 0 0 22px; }
+
+.rd-turn { scroll-margin-top: 16px; }
+.rd-turn + .rd-turn { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.rd-q { font: 600 0.92rem/1.4 var(--font-display); color: var(--ink); margin: 0 0 8px; padding-left: 12px; border-left: 2px solid var(--accent); }
+
+.rd-a { font: 400 0.98rem/1.62 var(--font-body); color: var(--ink); overflow-wrap: anywhere; }
+.rd-a p { margin: 0 0 0.75em; }
+.rd-a > :last-child { margin-bottom: 0; }
+.rd-a strong { font-weight: 700; }
+.rd-a h1, .rd-a h2, .rd-a h3 { font: 600 0.95rem/1.3 var(--font-display); margin: 1.1em 0 0.4em; }
+.rd-a ul, .rd-a ol { margin: 0 0 0.75em; padding-left: 1.25em; }
+.rd-a ul { list-style: disc; }
+.rd-a ol { list-style: decimal; }
+.rd-a li { margin: 0.25em 0; }
+.rd-a a { color: var(--accent); }
+.rd-a code { font: 0.82em var(--font-mono); background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 0.1em 0.3em; border-radius: 3px; }
+.rd-a pre { font: 0.8rem/1.5 var(--font-mono); background: color-mix(in srgb, var(--ink) 6%, transparent); border-left: 2px solid var(--rule); padding: 10px 12px; margin: 0 0 0.75em; overflow-x: auto; }
+.rd-a pre code { background: none; padding: 0; font-size: inherit; }
+.rd-a table { border-collapse: collapse; font: 0.82rem/1.4 var(--font-display); margin: 0 0 0.75em; }
+.rd-a th, .rd-a td { border-bottom: 1px solid var(--rule); padding: 5px 10px 5px 0; text-align: left; }
+/* the selection's own colour: with none set, a selection in the margin doesn't show */
+.rd-panel ::selection { background: color-mix(in srgb, var(--accent, #234be7) 26%, transparent); color: inherit; }
+/* → Note under words selected in an answer (on the canvas); a press on the selection drags it onto a note */
+.rd-pick { position: fixed; z-index: 500; border-radius: 999px; background: #19221f; box-shadow: 0 6px 18px rgba(25, 34, 31, 0.22); }
+.rd-pick button { border: 0; border-radius: 999px; background: transparent; padding: 6px 12px; font: 600 0.78rem/1 var(--font-display); color: #5eead4; cursor: pointer; }
+.rd-pick button:hover { background: var(--pop); color: var(--pop-ink); }
+.rd-wait { font: italic 400 0.95rem/1.6 var(--font-body); color: var(--muted); }
+.rd-caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: text-bottom; background: var(--accent); animation: rd-blink 1s steps(2, start) infinite; }
+@keyframes rd-blink { 50% { opacity: 0; } }
+
+/* ---- Composer ---- */
+.rd-compose { display: flex; align-items: flex-end; gap: 10px; padding: 14px 22px 18px; border-top: 1px solid var(--rule); flex: none; }
+.rd-field { flex: 1; min-height: 38px; max-height: 120px; resize: none; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink); font: 400 0.9rem/1.45 var(--font-display); }
+.rd-field::placeholder { color: var(--muted); }
+.rd-field:focus { border-color: var(--ink); outline: none; }
+.rd-send { height: 38px; padding: 0 16px; border: 1px solid var(--ink); border-radius: 3px; background: var(--ink); color: var(--paper); font: 600 0.82rem/1 var(--font-display); cursor: pointer; }
+.rd-send:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rd-send:disabled { opacity: 0.35; cursor: default; }
+
+/* ---- The tutor's window on the canvas (TutorPanel with `hud`): what was highlighted, its one-line definition at once, a depth
+   handle (components/DepthRail.tsx) and the answer as it is written. No title, tabs or labels. ---- */
+.th { --hot: #e0664f; --i2: color-mix(in srgb, var(--ink, #19221f) 66%, transparent); --i3: color-mix(in srgb, var(--ink, #19221f) 40%, transparent);
+  --i4: color-mix(in srgb, var(--ink, #19221f) 22%, transparent); }
+.th .rd-head { align-items: center; padding: 12px 22px 0; }
+.th-earlier { margin-left: auto; padding: 4px 0; border: 0; background: none; font: 500 0.78rem/1 var(--font-display); color: var(--muted); cursor: pointer; }
+.th-earlier:hover { color: var(--ink); }
+.th .rd-scroll { margin-top: 6px; padding-top: 8px; border-top: 0; }
+/* what was highlighted: the lesson's lock, its two defining corners and its tint */
+.th-lock { position: relative; margin: 0 0 6px; padding: 6px 10px; background: rgb(224 102 79 / 0.12); }
+.th-lock::before, .th-lock::after { content: ""; position: absolute; width: 7px; height: 7px; border: 0 solid var(--hot); }
+.th-lock::before { left: -3px; top: -3px; border-width: 1.5px 0 0 1.5px; }
+.th-lock::after { right: -3px; bottom: -3px; border-width: 0 1.5px 1.5px 0; }
+.th-lock > div { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font: 400 1.02rem/1.5 var(--font-body); color: var(--ink); }
+.th-where { margin: 0 0 14px; font: 400 0.72rem/1.3 var(--font-display); color: var(--muted); }
+.th-gloss { margin: 0 0 16px; font: 400 1rem/1.55 var(--font-body); color: var(--ink); animation: th-wipe 160ms ease-out; }
+@keyframes th-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+/* the depth handle */
+.th-rail { position: relative; height: 36px; margin: 2px 24px 18px; outline: none; touch-action: none; cursor: pointer; user-select: none; }
+.th-rail::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 1px; background: var(--i3); }
+.th-stop { position: absolute; top: 0; translate: -50% 0; padding: 20px 6px 0; border: 0; background: none; font: 500 0.74rem/1 var(--font-display); color: var(--muted); cursor: pointer; }
+.th-stop::before { content: ""; position: absolute; left: 50%; top: 4px; width: 1px; height: 9px; background: var(--i3); }
+.th-stop[data-have]::before { top: 6px; width: 5px; height: 5px; translate: -50% 0; border-radius: 50%; background: var(--i2); } /* read already */
+.th-stop[data-on] { color: var(--ink); font-weight: 600; }
+.th-knob { position: absolute; top: 8px; width: 14px; height: 14px; translate: -50% -50%; border: 1.5px solid var(--hot); border-radius: 50%; background: var(--card, #fff);
+  transition: left 140ms cubic-bezier(0.2, 0.8, 0.2, 1); pointer-events: none; }
+.th-rail[data-drag] .th-knob { transition: none; background: var(--hot); }
+.th-rail:focus-visible .th-knob { outline: 2px solid var(--hot); outline-offset: 3px; }
+/* waiting for the first words */
+.th-scan { position: relative; height: 2px; margin: 10px 0; background: var(--i4); overflow: hidden; }
+.th-scan::after { content: ""; position: absolute; inset: 0 68% 0 0; background: var(--hot); animation: th-scan 0.8s ease-in-out infinite alternate; }
+@keyframes th-scan { to { translate: 212% 0; } }
+.th .rd-caret { background: var(--hot); }
+.th .rd-q { border-left-color: var(--hot); }
+/* the follow-up: a line to write on */
+.th .rd-compose { padding: 6px 22px 16px; border-top: 0; }
+.th .rd-field { padding: 8px 0; border: 0; border-bottom: 1px solid var(--i3); border-radius: 0; background: transparent; }
+.th .rd-field:focus { border-color: var(--hot); }
+.th .rd-send { padding: 0 2px; border: 0; background: none; color: var(--ink); }
+.th .rd-send:hover:not(:disabled) { background: none; color: var(--hot); }
+@media (prefers-reduced-motion: reduce) { .th-gloss, .th-scan::after { animation: none; } .th-knob { transition: none; } }
+
+/* ---- Empty state ---- */
+.rd-empty { padding-top: 12px; max-width: 34ch; }
+.rd-empty p { font: 400 1rem/1.6 var(--font-body); color: var(--ink); margin: 0 0 14px; }
+.rd-empty p.rd-hint { color: var(--muted); font-size: 0.92rem; }
+.rd-link { border: 0; background: none; padding: 0; font: 500 0.85rem/1.3 var(--font-display); color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- Earlier questions (panel list + /learn/history) ---- */
+.rd-threads { list-style: none; margin: 0; padding: 0; }
+.rd-thread { border-bottom: 1px solid var(--rule); padding: 14px 0; }
+.rd-thread:first-child { padding-top: 0; }
+.rd-thread-open { display: block; width: 100%; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; }
+.rd-thread-open .rd-excerpt { font: 400 0.98rem/1.5 var(--font-body); color: var(--ink); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rd-thread-open:hover .rd-excerpt { color: var(--accent); }
+.rd-thread-meta { display: flex; gap: 14px; align-items: baseline; margin-top: 6px; font: 400 0.75rem/1.3 var(--font-display); color: var(--muted); }
+.rd-remove { border: 0; background: none; padding: 0; margin-left: auto; font: inherit; color: var(--muted); cursor: pointer; }
+.rd-remove:hover { color: #b3261e; text-decoration: underline; }
+
+.rd-history { max-width: 760px; padding-top: 36px; }
+.rd-history h2 { font: 600 1.5rem/1.1 var(--font-display); letter-spacing: -0.04em; margin: 0 0 6px; color: var(--ink); }
+.rd-history h3 { font: 600 0.9rem/1.3 var(--font-display); margin: 26px 0 12px; }
+.rd-history h3 a { color: var(--accent); text-decoration: none; }
+.rd-history h3 a:hover { text-decoration: underline; }
+.rd-history section + section { margin-top: 56px; }
+.rd-history .rd-thread { padding: 18px 0; }
+.rd-history .rd-thread-body { padding: 16px 0 4px; }
+
+/* ---- Lesson canvas: a tldraw board (draw, shapes, Space to pan) with the lesson, its linked pages,
+   Explore cards and the live lab as shapes on it. Classes are prefixed cv-; tldraw's own are tl-. ---- */
+
+/* Vibes: the board's looks, picked in the header (LessonCanvas). Each re-sets the app's own colour
+   tokens on the lesson page, so the header, tutor, cards and board change together. --pop is the
+   sticker colour (always light, under dark text); --sticker draws outlines and hard shadows. */
+.rd { --pop: var(--acid); --pop-ink: #1b1726; --sticker: var(--ink); --cv-dot: color-mix(in srgb, var(--ink) 20%, transparent); }
+.rd[data-vibe="lilac"] { --paper: #f6f2ff; --card: #fffdfa; --ink: #241a3f; --muted: #6c628c; --rule: #dcd2f2; --accent: #6747ee; --accent-soft: #ebe4ff;
+  --acid: #ffdf5e; --panel-2: #e9e2fa; color-scheme: light; }
+.rd[data-vibe="peach"] { --paper: #fff5ee; --card: #fffbf8; --ink: #2c1810; --muted: #7d5b4f; --rule: #f1d3c3; --accent: #dd3f68; --accent-soft: #ffe0e7;
+  --acid: #a8eedd; --panel-2: #fde2d2; color-scheme: light; }
+.rd[data-vibe="night"] { --paper: #1d1a33; --card: #28244a; --ink: #efeaff; --muted: #aea7d4; --rule: #3d3766; --accent: #a6b6ff; --accent-soft: #2e2a58;
+  --acid: #ff9fe0; --panel-2: #15122a; --win: #7ee0a8; --sticker: #0b0918; --cv-dot: #3a3466; color-scheme: dark; }
+
+/* the picker: one swatch per vibe, the desk colour with its sticker colour */
+.cv-vibes { display: flex; gap: 6px; }
+.cv-vibes button { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1.5px solid var(--ink); cursor: pointer;
+  background: linear-gradient(135deg, var(--base) 50%, var(--pop) 50%); transition: transform 0.15s ease; }
+.cv-vibes button:hover { transform: scale(1.12); }
+.cv-vibes button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--ink); }
+.cv-vibes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.cv-board { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: clip; }
+.cv-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font: 500 0.8rem/1 var(--font-display); color: var(--muted); }
+.cv-board .ask-panel { top: 56px; } /* below the board's menu */
+
+/* tldraw's tools wear the vibe: chunky outlined panels with a hard shadow, the active tool in the sticker colour */
+.cv-board .tl-container {
+  font-family: var(--font-display);
+  --tl-color-background: var(--panel-2);
+  --tl-color-panel: var(--card);
+  --tl-color-panel-contrast: var(--card);
+  --tl-color-low: var(--paper);
+  --tl-color-low-border: var(--rule);
+  --tl-color-divider: var(--rule);
+  --tl-color-text: var(--ink);
+  --tl-color-text-0: var(--ink);
+  --tl-color-text-1: var(--ink);
+  --tl-color-text-3: var(--muted);
+  --tl-color-muted-2: color-mix(in srgb, var(--ink) 8%, transparent);
+  --tl-color-hint: color-mix(in srgb, var(--ink) 8%, transparent);
+  --tl-color-selected: var(--pop);
+  --tl-color-selected-contrast: var(--pop-ink);
+  --tl-color-primary: var(--accent);
+  --tl-color-focus: var(--accent);
+  --tl-color-selection-stroke: var(--accent);
+  --tl-radius-2: 9px;
+  --tl-radius-3: 12px;
+  --tl-radius-4: 16px;
+  --tl-shadow-2: 0 0 0 1.5px var(--ink), 3px 3px 0 1.5px var(--sticker);
+  --tl-shadow-3: 0 0 0 1.5px var(--ink), 4px 4px 0 1.5px var(--sticker);
+  --tl-shadow-4: 0 0 0 1.5px var(--ink), 5px 5px 0 1.5px var(--sticker);
+}
+/* the desk: dots that move with the board (Board.tsx sets their size and offset) */
+.cv-desk { background-color: var(--panel-2); background-image: radial-gradient(circle, var(--cv-dot) 1.1px, transparent 1.7px); transition: background-color 0.7s ease; }
+
+/* The lesson and the pages opened from its links: sheets on the desk. A page's bar is a tab above it. */
+.cv-doc-frame { position: absolute; left: 0; right: 0; overflow: hidden; background: #fbfcfa; border: 2px solid var(--ink); border-radius: 14px;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--sticker) 22%, transparent); }
+.cv-doc-page .cv-doc-frame { border-top-left-radius: 0; border-top-right-radius: 0; }
+.cv-doc-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+/* the pointer is over a drawing on top of the page: the board's (LessonCanvas wireFrame) */
+.cv-doc-frame iframe.cv-pass { pointer-events: none !important; }
+.cv-page-bar { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px;
+  background: var(--card); border: 2px solid var(--ink); border-bottom: 0; border-radius: 14px 14px 0 0; cursor: grab; font: 600 0.82rem/1 var(--font-display); color: var(--ink); }
+.cv-page-bar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-page-bar span::before { content: "Linked"; margin-right: 8px; padding: 3px 8px; border-radius: 999px; background: var(--pop); color: var(--pop-ink); font-weight: 600; font-size: 0.72rem; }
+.cv-page-free span::before { content: "Web"; background: var(--accent-soft); color: var(--accent); }
+.cv-page-bar a { flex: none; font-weight: 500; color: var(--muted); text-decoration: none; pointer-events: all; }
+.cv-page-bar a:hover { color: var(--ink); }
+.cv-page-bar button, .cv-chip button, .cv-lab-bar button { pointer-events: all; }
+.cv-mini { flex: none; border: 0; background: none; padding: 0; font: 400 1rem/0.6 var(--font-display); color: var(--muted); cursor: pointer; }
+.cv-mini:hover { color: var(--ink); }
+.cv-reload { font-size: 0.95rem; line-height: 1; }
+.cv-reload[aria-busy] { animation: cv-spin 0.8s linear infinite; cursor: progress; }
+@keyframes cv-spin { to { transform: rotate(360deg); } }
+/* A minimized page: a pill you can drag anywhere. */
+.cv-chip { display: flex; align-items: center; gap: 8px; width: 340px; height: 34px; padding: 0 12px;
+  background: var(--card); border: 2px solid var(--ink); border-radius: 999px; box-shadow: 3px 3px 0 var(--sticker);
+  cursor: grab; user-select: none; font: 600 0.82rem/1 var(--font-display); color: var(--ink); }
+.cv-chip-icon { flex: none; width: 20px; height: 20px; border: 0; border-radius: 50%; background: var(--pop); padding: 0; color: var(--pop-ink); font-size: 0.72rem; cursor: pointer; }
+.cv-chip-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-chip-host { flex: none; font-weight: 500; color: var(--muted); font-size: 0.74rem; }
+
+/* Explore cards: stickers. The tab carries the term in the sticker colour; the depth dots fill as it deepens. */
+.cv-card { display: flex; flex-direction: column; overflow: hidden; background: var(--card); border: 2px solid var(--ink); border-radius: 16px; color: var(--ink);
+  box-shadow: 5px 5px 0 var(--sticker); animation: cv-in 0.28s cubic-bezier(0.3, 1.4, 0.5, 1); }
+@keyframes cv-in { from { opacity: 0; transform: translate(-8px, 6px) rotate(-1.5deg) scale(0.96); } }
+.cv-card > header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; flex: none; cursor: grab; background: var(--pop); color: var(--pop-ink); border-bottom: 2px solid var(--ink); }
+.cv-card h3 { flex: 1; min-width: 0; margin: 0; font: 700 0.98rem/1.25 var(--font-display); letter-spacing: -0.02em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cv-dots { display: inline-flex; gap: 3px; flex: none; }
+.cv-dots i { width: 7px; height: 7px; border: 1.5px solid currentColor; border-radius: 50%; opacity: 0.4; }
+.cv-dots i.ready { opacity: 0.75; }
+.cv-dots i.on { opacity: 1; background: currentColor; }
+.cv-x { flex: none; border: 0; background: none; padding: 0; font: 400 0.8rem/1 var(--font-display); color: var(--muted); cursor: pointer; }
+.cv-x:hover { color: var(--ink); }
+.cv-card > header .cv-x { color: inherit; opacity: 0.6; }
+.cv-card > header .cv-x:hover { opacity: 1; }
+
+/* Grips: the right edge widens, the bottom edge sets the height, the corner both (double-click to fit). */
+.cv-grip { position: absolute; z-index: 2; pointer-events: all; touch-action: none; }
+.cv-grip-r { top: 14px; bottom: 14px; right: -7px; width: 12px; cursor: ew-resize; }
+.cv-grip-b { left: 14px; right: 14px; bottom: -7px; height: 12px; cursor: ns-resize; }
+.cv-grip-r::after, .cv-grip-b::after { content: ""; position: absolute; border-radius: 999px; background: var(--accent); opacity: 0; transition: opacity 0.12s ease; }
+.cv-grip-r::after { top: 30%; bottom: 30%; left: 4px; width: 4px; }
+.cv-grip-b::after { left: 30%; right: 30%; top: 4px; height: 4px; }
+.cv-grip-r:hover::after, .cv-grip-b:hover::after, .cv-grab-size .cv-grip::after { opacity: 1; }
+.cv-grip-c { right: -9px; bottom: -9px; width: 20px; height: 20px; border-radius: 50%; cursor: nwse-resize; background: var(--pop); border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--sticker); opacity: 0; transition: opacity 0.12s ease, transform 0.12s ease; }
+.tl-html-container:hover > .cv-grip-c, .cv-grab-size > .cv-grip-c { opacity: 1; }
+.cv-grip-c:hover { transform: scale(1.15); }
+.cv-grab-move .cv-card, .cv-grab-move .cv-body { cursor: grabbing; }
+.cv-grab-move .cv-card { box-shadow: 9px 9px 0 var(--sticker); transform: translate(-2px, -2px); }
+.cv-grab-size .cv-card { transition: none; }
+/* while a card is dragged or resized, the pages' frames don't swallow the pointer */
+.cv-dragging iframe { pointer-events: none !important; }
+.cv-dragging, .cv-dragging * { user-select: none; }
+/* card text can be highlighted (tldraw makes everything on its board unselectable: `.tl-container *`) */
+.cv-board .cv-body, .cv-board .cv-body * { -webkit-user-select: text; user-select: text; }
+.cv-dragging .cv-board .cv-body, .cv-dragging .cv-board .cv-body * { -webkit-user-select: none; user-select: none; }
+
+.cv-body { padding: 10px 16px 14px; user-select: text; -webkit-user-select: text; flex: 1 1 auto; min-height: 0; overflow-y: auto; cursor: text; }
+.cv-part + .cv-part { margin-top: 14px; padding-top: 12px; border-top: 2px dotted var(--rule); animation: cv-part 0.3s ease-out; }
+@keyframes cv-part { from { opacity: 0; transform: translateY(6px); } }
+.cv-part h4 { display: inline-block; margin: 0 0 8px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 600 0.7rem/1.2 var(--font-display); }
+.cv-text { font: 400 0.95rem/1.65 var(--font-body); overflow-wrap: break-word; font-variant-numeric: lining-nums tabular-nums; }
+.cv-l1 .cv-text { font-size: 1rem; }
+.cv-text p { margin: 0 0 0.8em; }
+.cv-text li { margin: 0.2em 0; }
+.cv-text strong { font-weight: 600; background: linear-gradient(transparent 62%, color-mix(in srgb, var(--pop) 70%, transparent) 62%); }
+.cv-text .katex { font-size: 1.04em; }
+.cv-text .katex-display { margin: 0.7em 0 0.85em; padding: 0.15em 0.1em; overflow-x: auto; overflow-y: hidden; }
+.cv-text .katex-display > .katex { font-size: 1.08em; }
+.cv-text > :last-child { margin-bottom: 0; }
+.cv-text ul, .cv-text ol { margin: 0 0 0.65em; padding-left: 1.2em; }
+.cv-text ul { list-style: disc; }
+.cv-text ol { list-style: decimal; }
+.cv-text code { font: 500 0.82em var(--font-mono); background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 0.08em 0.3em; border-radius: 4px; }
+.cv-text pre { overflow-x: auto; margin: 0 0 0.65em; }
+.cv-text.live > :last-child::after { content: ""; display: inline-block; width: 0.5em; height: 0.5em; margin-left: 4px; vertical-align: 0.05em; border-radius: 50%; background: var(--accent); animation: cv-blink 0.9s ease-in-out infinite; }
+@keyframes cv-blink { 50% { opacity: 0.2; transform: scale(0.7); } }
+.cv-wait { margin: 0; font: 400 0.85rem/1.5 var(--font-body); color: var(--muted); font-style: italic; }
+.cv-err { margin: 0 0 6px; font: 400 0.85rem/1.5 var(--font-body); color: #d0314b; }
+.cv-svg { border: 2px solid var(--rule); border-radius: 12px; overflow: hidden; background: #fbf9f3; line-height: 0; }
+.cv-svg svg { display: block; width: 100%; height: auto; }
+.cv-note { margin: 6px 0 0; font: 400 0.7rem/1.4 var(--font-display); color: var(--muted); }
+.cv-body .cv-mini, .cv-note .cv-mini { font: 600 0.7rem/1.4 var(--font-display); display: inline; color: var(--accent); text-decoration: underline; }
+.cv-deeper { flex: none; display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-top: 2px solid var(--ink); background: transparent; padding: 10px 16px;
+  font: 600 0.78rem/1 var(--font-display); color: var(--ink); cursor: zoom-in; }
+.cv-deeper span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--pop); color: var(--pop-ink); }
+.cv-deeper:hover { background: var(--ink); color: var(--card); }
+::highlight(asked) { background-color: #ddf59e; color: #19221f; }
+
+/* Marks: a passage you explored (E), asked about (A) or clipped to a note (N) stays highlighted, with a
+   small tag at its end; the tag (or the passage) takes you to its card, answer or note (or the note's
+   lab, while it is one). The colours in the lesson and linked pages are set in their own documents
+   (MARK_CSS in LessonCanvas). */
+::highlight(cv-explore) { background-color: color-mix(in srgb, var(--pop, #ddf59e) 85%, transparent); color: inherit; }
+::highlight(cv-ask) { background-color: color-mix(in srgb, var(--accent, #234be7) 22%, transparent); color: inherit; }
+::highlight(cv-note) { background-color: rgba(20, 184, 166, 0.28); color: inherit; }
+.cv-tag { position: absolute; z-index: 300; display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border: 1.5px solid var(--ink); border-radius: 999px;
+  font: 800 0.62rem/1 var(--font-display); letter-spacing: 0; cursor: pointer; box-shadow: 1.5px 1.5px 0 var(--sticker); transition: transform 0.12s ease; }
+.cv-tag:hover { transform: translateY(-1px) scale(1.12); }
+.cv-tag-explore { background: var(--pop); color: var(--pop-ink); }
+.cv-tag-ask { background: var(--accent); color: #fff; border-color: var(--ink); }
+.cv-tag-note { background: #0f9488; color: #fff; }
+/* the card or note a mark took you to, briefly */
+.cv-card.cv-flash, .cv-note.cv-flash { animation: cv-flash 1.4s ease-out; }
+@keyframes cv-flash { 0%, 30% { box-shadow: 5px 5px 0 var(--sticker), 0 0 0 6px color-mix(in srgb, var(--pop) 90%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .cv-tag { transition: none; } .cv-card.cv-flash, .cv-note.cv-flash { animation: none; } }
+
+/* the bar under a highlight */
+.cv-pick { position: absolute; z-index: 400; display: inline-flex; align-items: center; gap: 2px; border: 2px solid #19221f; border-radius: 999px; background: #19221f; color: #f4f6f2;
+  padding: 3px 4px 3px 12px; font: 600 0.8rem/1 var(--font-display); white-space: nowrap; cursor: auto; box-shadow: 3px 3px 0 color-mix(in srgb, #19221f 35%, transparent);
+  animation: cv-pop 0.18s cubic-bezier(0.3, 1.5, 0.5, 1); transform-origin: 12px 0; }
+@keyframes cv-pop { from { opacity: 0; transform: scale(0.85); } }
+.cv-pick::before { content: ""; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; background: var(--pop); }
+.cv-pick button { font: inherit; color: inherit; background: transparent; border: 0; border-radius: 999px; padding: 6px 10px; cursor: pointer; }
+.cv-pick button:hover { background: var(--pop); color: var(--pop-ink); }
+.cv-pick span { margin-left: 6px; padding: 0 4px 0 10px; border-left: 1px solid rgba(244, 246, 242, 0.25); font-weight: 500; opacity: 0.7; }
+
+.cv-hud { position: absolute; z-index: 400; left: 50%; top: 10px; translate: -50% 0; display: flex; gap: 8px; }
+.cv-hud button { height: 34px; padding: 0 14px; border: 2px solid var(--ink); border-radius: 999px; background: var(--card); box-shadow: 3px 3px 0 var(--sticker);
+  font: 600 0.8rem/1 var(--font-display); color: var(--ink); cursor: pointer; white-space: nowrap; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.cv-hud button:hover { background: var(--pop); color: var(--pop-ink); }
+.cv-hud button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--sticker); }
+.cv-hud kbd { font: 600 0.66rem var(--font-mono); border: 1.5px solid currentColor; border-radius: 6px; padding: 1px 5px; margin-left: 6px; opacity: 0.7; }
+.cv-hint { position: absolute; z-index: 400; left: 16px; top: 56px; max-width: 400px; margin: 0; padding: 14px 16px; background: var(--card); border: 2px solid var(--ink); border-radius: 16px;
+  box-shadow: 4px 4px 0 var(--sticker); font: 400 0.82rem/1.55 var(--font-display); color: var(--ink); pointer-events: none; }
+.cv-hint .cv-x { float: right; margin: 0 0 4px 10px; pointer-events: auto; }
+.cv-hint kbd { font: 600 0.7rem var(--font-mono); background: var(--pop); color: var(--pop-ink); border-radius: 5px; padding: 1px 5px; }
+.cv-clear { border: 0; background: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; }
+.cv-clear:hover { color: var(--ink); }
+/* The lesson's HUD (components/canvas/LessonHud.tsx): what you highlight in the lesson is defined at once, in the margin beside it.
+   The lab's instrument language on the lesson's paper: hairlines in the app's ink, and one hot colour (coral) only for what the
+   hand is on, the highlight being made or a kept definition under the pointer. Brackets lock onto the words, a tether runs under
+   the line to the readout, a knob at the lock's foot opens a fan of what to do with them, and a rail at the screen's edge maps
+   the kept definitions over the lesson. It takes no pointer events but on its knob, ticks and buttons: the board stays the board. */
+.hud-layer { --hot: #e0664f; --i2: color-mix(in srgb, var(--ink, #19221f) 66%, transparent); --i3: color-mix(in srgb, var(--ink, #19221f) 40%, transparent);
+  --i4: color-mix(in srgb, var(--ink, #19221f) 22%, transparent); position: absolute; inset: 0; z-index: 300; overflow: hidden; pointer-events: none; }
+.hud-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hud-layer path, .hud-layer line, .hud-layer circle { fill: none; stroke-width: 1px; }
+.hud-lock { stroke: var(--i3); }
+.hud-lock.hud-on { stroke: var(--hot); stroke-width: 1.5px; transform-box: fill-box; transform-origin: center; animation: hud-snap 110ms cubic-bezier(.2,.8,.2,1); }
+.hud-lock.hud-miss { stroke: var(--i3); stroke-dasharray: 3 3; }
+/* waiting for a definition: the lock hunts, and dashes run down the tether to the readout */
+.hud-lock.hud-seek { stroke: var(--hot); stroke-dasharray: 3 3; transform-box: fill-box; transform-origin: center; animation: hud-march .45s linear infinite, hud-breathe .7s ease-in-out infinite alternate; }
+.hud-flow { stroke: var(--hot); stroke-dasharray: 4 5; animation: hud-run .45s linear infinite; }
+@keyframes hud-march { to { stroke-dashoffset: -6; } }
+@keyframes hud-run { to { stroke-dashoffset: -9; } }
+@keyframes hud-breathe { to { transform: scale(1.1); } }
+@keyframes hud-scan { to { translate: 212% 0; } }
+.hud-scan { position: relative; height: 2px; margin: 8px 0 8px; background: var(--i4); overflow: hidden; }
+.hud-scan::after { content: ""; position: absolute; inset: 0 68% 0 0; background: var(--hot); animation: hud-scan .8s ease-in-out infinite alternate; }
+.hud-read.hud-wait .hud-head { color: var(--i2); font-weight: 500; }
+.hud-tether { stroke: var(--hot); stroke-dasharray: 1; animation: hud-draw 160ms ease-out; }
+@keyframes hud-snap { from { transform: scale(1.4); opacity: .15; } }
+@keyframes hud-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes hud-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes hud-pop { from { scale: .3; opacity: 0; } }
+.hud-read { position: absolute; transform-origin: 0 0; width: 280px; padding: 1px 6px 3px 11px; color: var(--i2); font: 400 13px/18px var(--font-body, Georgia, serif); }
+.hud-read::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border: 1px solid var(--i4); border-right: 0; }
+.hud-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font: 600 13px/18px var(--font-display, Inter, sans-serif); color: var(--i2); }
+.hud-ms { font: 400 10px/18px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace); font-variant-numeric: tabular-nums; color: var(--hot); white-space: nowrap; }
+.hud-read.hud-on { z-index: 1; color: var(--ink, #19221f); background: color-mix(in srgb, var(--paper, #f4f6f2) 97%, transparent); }
+.hud-read.hud-on::before { border-color: var(--hot); }
+.hud-read.hud-on .hud-head { color: var(--ink, #19221f); }
+.hud-read.hud-on .hud-def { animation: hud-wipe 150ms ease-out; }
+.hud-read.hud-miss { font-style: italic; color: var(--i3); }
+/* a definition made in a card: the board's own page tints its words too (a frame's page has its own rule, lessonGloss.ts) */
+::highlight(hud-tint) { background-color: rgb(224 102 79 / 0.15); }
+/* in the left margin of what it defines: its bracket faces the words */
+.hud-read.hud-left { padding: 1px 11px 3px 6px; }
+.hud-read.hud-left::before { left: auto; right: 0; border: 1px solid var(--i4); border-left: 0; }
+.hud-read.hud-left.hud-on::before { border-color: var(--hot); }
+.hud-rail { position: absolute; right: 18px; top: 44%; height: 38%; width: 15px; }
+.hud-rail::before { content: ""; position: absolute; left: 7px; top: 0; bottom: 0; width: 1px; background: var(--i3); }
+.hud-win { position: absolute; left: 3px; right: 3px; min-height: 4px; border: 1px solid var(--i3); }
+.hud-tick { position: absolute; left: 0; width: 15px; height: 9px; translate: 0 -4px; padding: 0; border: 0; background: none; pointer-events: auto; cursor: pointer; }
+.hud-tick::after { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 1px; background: var(--i2); }
+.hud-tick.hud-on::after { left: 0; right: 0; height: 2px; top: 3px; background: var(--hot); }
+.hud-foot { position: absolute; right: 0; top: calc(100% + 8px); display: grid; justify-items: end; gap: 3px; white-space: nowrap;
+  font: 400 10px/14px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace); font-variant-numeric: tabular-nums; color: var(--i2); }
+.hud-foot button { margin-left: 8px; padding: 0; border: 0; background: none; font: inherit; color: var(--i3); pointer-events: auto; cursor: pointer; }
+.hud-foot button:hover { color: var(--hot); }
+/* the glossary was just written for this lesson */
+.hud-toast { position: absolute; left: 14px; bottom: 60px; z-index: 2; padding: 5px 11px; border-radius: 999px; background: color-mix(in srgb, var(--ink, #19221f) 88%, transparent);
+  color: var(--paper, #f4f6f2); font: 500 12px/1.3 var(--font-display, Inter, sans-serif); }
+/* the knob and its fan */
+.hud-catch { position: absolute; inset: 0; z-index: 1; pointer-events: auto; cursor: crosshair; }
+.hud-dot { position: absolute; z-index: 2; width: 14px; height: 14px; translate: -50% -50%; padding: 0; border: 1.5px solid var(--hot); border-radius: 50%;
+  background: var(--paper, #f4f6f2); pointer-events: auto; cursor: grab; touch-action: none; animation: hud-pop 140ms cubic-bezier(.2,.8,.2,1); }
+.hud-dot:hover, .hud-dot[data-open] { background: var(--hot); }
+.hud-dot:focus-visible { outline: 2px solid var(--hot); outline-offset: 3px; }
+.hud-layer path.hud-wedge { fill: color-mix(in srgb, var(--paper, #f4f6f2) 97%, transparent); stroke: none; }
+.hud-rim { stroke: var(--i3); }
+.hud-dead { stroke: var(--i4); stroke-dasharray: 3 3; }
+.hud-link { stroke: var(--hot); stroke-width: 1.5px; }
+.hud-fan text { font: 600 12px/14px var(--font-display, Inter, sans-serif); fill: var(--i2); }
+.hud-fan text.hud-on { fill: var(--hot); }
+.hud-fan .hud-dim { font-weight: 400; font-size: 10.5px; fill: var(--i3); }
+.hud-fan circle.hud-end { fill: var(--hot); stroke: none; }
+@media (prefers-reduced-motion: reduce) { .hud-layer * { animation: none !important; } }
+
+/* ---- One frame for everything on the board (components/canvas/Frame.tsx).
+   A card, a note, a linked page and the lab wear the same bar: [kind] title … [Pin] [–] [✕], and fold to the same chip. ---- */
+.fr-bar.fr-bar { display: flex; align-items: center; gap: 6px; flex: none; height: 34px; padding: 0 5px 0 8px; border: 0; border-bottom: 2px solid var(--ink);
+  border-radius: 0; background: var(--card); color: var(--ink); cursor: grab; font: 600 0.84rem/1 var(--font-display); }
+.fr-kind { flex: none; padding: 4px 8px; border-radius: 999px; font: 600 0.66rem/1 var(--font-display); background: var(--pop); color: var(--pop-ink); }
+.fr-note .fr-kind { background: #14b8a6; color: #fff; }
+.fr-page .fr-kind { background: none; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--rule); }
+.fr-lab .fr-kind { background: #e0664f; color: #fff; }
+.fr-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-bar .fr-title h3, .fr-chip .fr-title h3 { display: inline; margin: 0; font: inherit; letter-spacing: -0.01em; -webkit-line-clamp: unset; }
+.fr-btn { flex: none; min-width: 26px; height: 26px; padding: 0 7px; border: 0; border-radius: 7px; background: none; color: var(--muted);
+  font: 500 0.76rem/26px var(--font-display); cursor: pointer; pointer-events: all; }
+.fr-btn:hover { background: color-mix(in srgb, var(--ink) 9%, transparent); color: var(--ink); }
+.fr-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fr-pin.on { background: var(--ink); color: var(--paper); }
+.fr-link { flex: none; color: var(--muted); font-weight: 500; font-size: 0.74rem; text-decoration: none; pointer-events: all; }
+.fr-link:hover { color: var(--ink); }
+/* a page's and the lab's bar sits above their content */
+.cv-doc > .fr-bar.fr-bar, .cv-lab > .fr-bar.fr-bar { position: absolute; left: 0; right: 0; top: 0; }
+.cv-doc > .fr-bar.fr-bar { border: 2px solid var(--ink); border-bottom: 0; border-radius: 14px 14px 0 0; }
+.fr-bar.fr-lab { background: color-mix(in srgb, var(--lab-deep) 90%, #fff); color: #e8e8e8; border: 1px solid var(--lab-edge); border-bottom: 0; border-radius: 12px 12px 0 0; }
+.fr-lab .fr-btn { color: #9a9a9a; }
+.fr-lab .fr-btn:hover { color: #fff; background: rgb(255 255 255 / 0.1); }
+/* folded: a chip, the same for all four */
+.fr-chip { display: flex; align-items: center; gap: 6px; width: 340px; height: 34px; padding: 0 5px; border: 2px solid var(--ink); border-radius: 999px;
+  background: var(--card); color: var(--ink); font: 600 0.8rem/1 var(--font-display); box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 22%, transparent); cursor: grab; }
+.fr-open { width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 50%; background: var(--pop); color: var(--pop-ink); line-height: 24px; }
+.fr-badge { flex: none; color: var(--muted); font-weight: 500; font-size: 0.72rem; }
+/* a card's depth, under its bar: Definition, Plain words, How it works, Picture */
+.cv-depth { --hot: #e0664f; --i2: color-mix(in srgb, var(--ink, #19221f) 66%, transparent); --i3: color-mix(in srgb, var(--ink, #19221f) 40%, transparent);
+  --i4: color-mix(in srgb, var(--ink, #19221f) 22%, transparent); flex: none; padding: 10px 6px 0; }
+.cv-depth .th-rail { margin: 0 26px 10px; }
+.cv-depth .th-stop { white-space: nowrap; font-size: 0.7rem; }
+/* what the lab wrote in a note, folded to one line */
+.fr-labfold .cv-note-doc [data-by="lab"] { display: none; }
+.fr-labline { flex: none; margin: 0 12px 10px; padding: 5px 9px; border: 1px dashed color-mix(in srgb, #14b8a6 60%, transparent); border-radius: 7px;
+  background: color-mix(in srgb, #14b8a6 8%, transparent); color: var(--muted); font: 500 0.74rem/1.2 var(--font-display); text-align: left; cursor: pointer; }
+.fr-labline:hover { color: var(--ink); }
+/* the HUD's rail at the screen's left edge maps the whole board: a mark for each card, note, page and lab (press one to go there) */
+.hud-layer .hud-rail { left: 16px; right: auto; top: 20%; height: 58%; width: 20px; }
+.hud-layer .hud-foot { left: 0; right: auto; justify-items: start; }
+.hud-layer .hud-foot button { margin: 0 8px 0 0; }
+.hud-thing { position: absolute; left: 11px; width: 7px; padding: 0; border: 0; border-radius: 2px; background: var(--i3); pointer-events: auto; cursor: pointer; }
+.hud-thing.hud-k-card { background: var(--pop); box-shadow: inset 0 0 0 1px var(--ink); }
+.hud-thing.hud-k-note { background: #14b8a6; }
+.hud-thing.hud-k-page { background: none; box-shadow: inset 0 0 0 1px var(--i2); }
+.hud-thing.hud-k-lab { background: #19221f; }
+.hud-thing:hover { outline: 2px solid var(--hot); outline-offset: 1px; }
+
+/* ---- The note as one sheet, with no boxes in it. Its heading is its title (the bar keeps only "Note" and its
+   controls); a clip is the passage itself, tinted as the lesson marks a clipped passage, its source in small type after it; what
+   the lab wrote has a rule in the margin, not a block of colour; its actions sit at the foot, with no box round them. ---- */
+.fr-bar.fr-bar > .fr-kind { flex: none; }
+.fr-bar.fr-bar > .fr-title { flex: 1; }
+.fr-bar.fr-note { background: transparent; border-bottom: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); }
+.fr-note .fr-kind { padding: 0; background: none; color: #0f8f80; font-size: 0.72rem; }
+.cv-note .cv-note-body { padding: 12px 20px 10px; }
+.cv-note .cv-note-doc { line-height: 1.55; }
+.cv-note .cv-note-doc > * + * { margin-top: 0.45em; }
+.cv-note .cv-note-doc h1 { font-size: 1.45rem; }
+.cv-note .cv-clip { display: inline; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; font: inherit; }
+.cv-note .cv-clip-q { font-style: italic; padding: 0.04em 0.15em; border-radius: 2px; background: color-mix(in srgb, #14b8a6 20%, transparent);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.cv-note .cv-clip-q::before, .cv-note .cv-clip-q::after { content: none; }
+.cv-note .cv-clip-at { display: inline-flex; align-items: baseline; gap: 6px; margin: 0 0 0 6px; vertical-align: baseline; font: 500 0.72rem/1.3 var(--font-display); }
+.cv-note .cv-clip-where { flex: none; max-width: 18em; }
+.cv-note .cv-clip-at button { opacity: 0; transition: opacity 120ms; }
+.cv-note .cv-clip:hover .cv-clip-at button, .cv-note .cv-clip:focus-within .cv-clip-at button { opacity: 1; }
+.cv-note .cv-clip.ProseMirror-selectednode { outline: 0; }
+.cv-note .cv-clip.ProseMirror-selectednode .cv-clip-q { box-shadow: 0 0 0 2px var(--accent); }
+.cv-note .cv-note-doc [data-by="model"] { background: none; color: color-mix(in srgb, var(--accent) 65%, var(--ink)); }
+.cv-note .cv-note-doc [data-by="lab"] { background: none; color: color-mix(in srgb, var(--ink) 80%, #0f766e); }
+.cv-note .cv-note-doc > p:has(> [data-by="lab"]) { margin-left: -12px; padding-left: 10px; border-left: 2px solid color-mix(in srgb, #14b8a6 45%, transparent); }
+.cv-note .fr-labline { margin: 0 20px 6px; padding: 0; border: 0; background: none; color: var(--muted); font: 500 0.74rem/1.3 var(--font-display); }
+.cv-note .fr-labline:hover { color: var(--ink); }
+.cv-note .cv-note-foot { gap: 14px; padding: 4px 20px 14px; border-top: 0; }
+.cv-note .cv-launch { padding: 5px 12px; border-width: 1.5px; font-size: 0.76rem; }
+.cv-note .cv-skip { font-size: 0.76rem; }
+
+/* "Recall first?" on a card that reuses an earlier one */
+.cv-recall p { margin: 0 0 10px; font: 400 0.95rem/1.5 var(--font-body); }
+.cv-recall .cv-seen { margin-bottom: 6px; font: 400 0.74rem/1.4 var(--font-display); color: var(--muted); }
+.cv-recall div { display: flex; gap: 14px; align-items: center; }
+.cv-show { border: 2px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--card); padding: 7px 14px; font: 600 0.8rem/1 var(--font-display); cursor: pointer; }
+.cv-show:hover { background: var(--pop); color: var(--pop-ink); }
+.cv-skip { border: 0; background: none; padding: 0; font: 500 0.8rem/1 var(--font-display); color: var(--muted); cursor: pointer; text-decoration: underline; }
+.cv-skip:hover { color: var(--ink); }
+.cv-had { flex: none; margin: 0; padding: 0 16px 12px; font: 400 0.8rem/1.4 var(--font-display); color: var(--muted); }
+.cv-had button { border: 1.5px solid var(--rule); border-radius: 999px; background: none; padding: 2px 10px; font: 600 0.74rem/1.4 var(--font-display); color: var(--ink); cursor: pointer; }
+.cv-had button:hover { border-color: var(--ink); background: var(--pop); color: var(--pop-ink); }
+.cv-board button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .cv-card, .cv-note, .cv-part + .cv-part, .cv-pick, .cv-vibes button, .cv-hud button { animation: none; transition: none; } }
+
+/* Notes: a sticky note in the vibe's colour. Its bar drags it; clips sit on top, then the learner's
+   writing, then the starting point (tinted while still as made: the model's heading and bridge in the
+   accent, the learner's draft in the sticker colour), then Steer from this / Launch. */
+.cv-note { display: flex; flex-direction: column; overflow: hidden; background: color-mix(in srgb, var(--pop) 34%, var(--card)); border: 2px solid var(--ink);
+  border-radius: 4px 4px 18px 4px; color: var(--ink); box-shadow: 5px 5px 0 var(--sticker); animation: cv-in 0.28s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.cv-note > header { display: flex; align-items: center; gap: 8px; flex: none; height: 28px; padding: 0 10px; cursor: grab; background: var(--pop); color: var(--pop-ink);
+  border-bottom: 2px solid var(--ink); font: 700 0.7rem/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
+.cv-note > header > span { flex: 1; }
+.cv-note > header .cv-tag { position: static; }
+.cv-note > header .cv-x { color: inherit; opacity: 0.6; }
+.cv-note > header .cv-x:hover { opacity: 1; }
+.cv-note > header .cv-pin { flex: none; border: 1.5px solid currentColor; border-radius: 3px; background: none; padding: 2px 6px; color: inherit; opacity: 0.6; cursor: pointer;
+  font: 700 0.62rem/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
+.cv-note > header .cv-pin:hover { opacity: 1; }
+.cv-note > header .cv-pin.on { opacity: 1; background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.cv-note-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 12px; cursor: auto; }
+/* what the lab wrote after the starting point: quieter than your own words */
+/* a note's text (NoteDoc): one document, the clips inline where they were dropped, the model's and the lab's words tinted */
+.cv-note-doc { min-height: 1.6em; outline: 0; font: 400 1.2rem/1.6 var(--font-body); /* the lesson's body size (course.css --step-0) */ color: var(--ink); white-space: pre-wrap; overflow-wrap: break-word; }
+.cv-board .cv-note-doc { -webkit-user-select: text; user-select: text; } /* the board turns selection off around it */
+.cv-note-doc > * + * { margin-top: 0.55em; }
+.cv-note-doc p { margin: 0; }
+.cv-note-doc h1, .cv-note-doc h2, .cv-note-doc h3 { margin: 0; font: 600 1.6rem/1.15 var(--font-display); letter-spacing: -0.03em; }
+.cv-note-doc h2 { font-size: 1.4rem; }
+.cv-note-doc h3 { font-size: 1.25rem; }
+.cv-note-doc ul, .cv-note-doc ol { margin: 0; padding-left: 1.3em; }
+.cv-note-doc blockquote { margin: 0; padding-left: 10px; border-left: 3px solid var(--rule); }
+.cv-note-doc p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: var(--muted); opacity: 0.8; }
+.cv-note-doc [data-by="model"] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 3px; }
+.cv-note-doc [data-by="lab"] { background: color-mix(in srgb, #14b8a6 16%, transparent); border-radius: 3px; }
+/* one box however many lines it wraps to: short, it sits in the sentence; long, it takes a line of its own */
+.cv-clip { display: inline-block; max-width: 100%; box-sizing: border-box; margin: 1px 2px; padding: 4px 8px 3px; vertical-align: top;
+  border: 1.5px solid var(--ink); border-left-width: 4px; border-radius: 6px; background: var(--card); font: 400 1.1rem/1.5 var(--font-body); white-space: normal; cursor: default; }
+.cv-clip.ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cv-clip-q::before { content: "“"; } .cv-clip-q::after { content: "”"; }
+.cv-clip-at { display: flex; align-items: center; gap: 8px; margin-top: 4px; font: 500 0.78rem/1.3 var(--font-display); color: var(--muted); }
+.cv-clip-where { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-clip-at button { flex: none; border: 0; padding: 0; background: none; font: inherit; font-size: 0.95rem; line-height: 1; color: var(--muted); cursor: pointer; }
+.cv-clip-at button[data-act="go"] { color: var(--accent); }
+.cv-clip-at button:hover { color: var(--ink); }
+.cv-note-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: none; padding: 8px 12px; border-top: 2px solid var(--ink); }
+.cv-launch { border: 2px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--card); padding: 6px 14px; font: 600 0.8rem/1 var(--font-display); cursor: pointer; }
+.cv-launch:hover:not(:disabled) { background: #ff5a1f; border-color: #ff5a1f; color: #fff; }
+.cv-note-foot button:disabled { opacity: 0.55; cursor: default; }
+.cv-note-foot button[aria-busy] { cursor: progress; }
+.cv-note-foot .cv-err { flex-basis: 100%; margin: 0; }
+
+/* "Steer live": the live lab as a shape on the board, a note's other face; the board stays as it is
+   around it. The lab is dark-only (white ink): its dark is the vibe's deepest colour, its ink in a light
+   vibe and its card in a dark one, so it reads as the vibe's own and not a black hole in it. */
+.rd { --lab-deep: var(--ink); --lab-edge: color-mix(in srgb, var(--lab-deep) 80%, #fff); }
+.rd[data-vibe="night"] { --lab-deep: var(--card); }
+@media (prefers-color-scheme: dark) { .rd:not([data-vibe]) { --lab-deep: var(--card); } }
+.cv-lab-bar { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px;
+  background: color-mix(in srgb, var(--lab-deep) 90%, #fff); color: #e8e8e8; border: 1px solid var(--lab-edge); border-bottom: 0; border-radius: 12px 12px 0 0; cursor: grab; font: 600 0.82rem/1 var(--font-display); }
+.cv-lab-bar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-lab-bar span::before { content: "Steer live · "; font-weight: 500; color: #8a8a8a; }
+.cv-lab-bar .cv-x { color: #8a8a8a; }
+.cv-lab-bar .cv-x:hover { color: #fff; }
+.cv-lab-body { position: absolute; left: 0; right: 0; overflow: hidden; background: var(--lab-deep); border: 1px solid var(--lab-edge); border-radius: 0 0 12px 12px;
+  box-shadow: 0 30px 80px -30px color-mix(in srgb, var(--lab-deep) 70%, #000);
+  transform-origin: 0 50%; animation: cv-lab-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both; }
+@keyframes cv-lab-in { from { opacity: 0; transform: scale(0.94); } }
+/* In a card the column fills the card, from just right of its line rail to a slimmer gutter for pinned
+   dials, up to 120ch; a card wider than that centres it (never closer to the edge than the rail needs).
+   Its own page, /steer, keeps page-wide margins. The rail follows the column (lib/lab/lab.ts), and pins
+   wrap their labels to the gutter. */
+.cv-lab-body .steer-lab { --bg: var(--lab-deep); --gutter: 18ch; }
+.cv-lab-body .steer-lab .text {
+  width: clamp(30ch, 100% - var(--rail-width) - var(--gutter) - 28px, 120ch);
+  margin-left: max(var(--rail-width) + 20px, (100% - 120ch) / 2); margin-right: auto; padding-block: 16px; }
+.cv-pick .cv-steer { margin-left: 4px; color: var(--pop); }
+.cv-pick .cv-to-note { color: #5eead4; }
+/* a highlight dragged towards a note: its words follow the pointer, and the note it would go into lights up */
+.cv-carry { position: absolute; z-index: 450; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
+  padding: 6px 12px; border: 2px solid #19221f; border-left: 5px solid #5eead4; border-radius: 8px; background: #19221f; color: #f4f6f2;
+  font: 500 0.8rem/1.2 var(--font-display); box-shadow: 3px 3px 0 color-mix(in srgb, #19221f 35%, transparent); }
+.cv-note.cv-drop { outline: 3px solid #14b8a6; outline-offset: 3px; }
+.cv-lab.cv-drop { outline: 3px solid #14b8a6; outline-offset: 3px; border-radius: 10px; } /* a passage dragged onto an open lab */
+.cv-note.cv-moving, .cv-note.cv-moving * { cursor: grabbing !important; } /* carried by a double-click and drag */
+/* where in the note's text the dragged highlight would land */
+.cv-drop-caret { position: absolute; z-index: 449; width: 3px; border-radius: 2px; background: #14b8a6; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .cv-lab-body { animation: none; } }
+
+/* Liquid overlap (components/canvas/liquid.ts): a frame pressed into, or with a rippling edge, is cut to its contour and drawn by
+   two paths, its fill under its contents and its edge over them; its own border and shadow step aside meanwhile. */
+.lq-svg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.lq-under { z-index: -1; }
+.lq-over { z-index: 5; }
+[data-liquid] { isolation: isolate; }
+[data-liquid] :is(.cv-card, .cv-note, .cv-doc-frame, .fr-bar.fr-page, .cv-page-bar, .cv-lab-bar, .cv-lab-body) { border-color: transparent !important; box-shadow: none !important; }
+
+/* The board chat (components/canvas/BoardChat.tsx): a ✦ beside the tool strip, a field that takes the strip's place,
+   and a frosted sheet that rises on send. Its colours are the vibe's, so it changes with the look like the rest. */
+/* at rest: a ✦ beside tldraw's tool strip, in its row, so nothing above it is covered */
+.bc-chip { position: absolute; z-index: 470; display: grid; place-items: center; padding: 0; cursor: pointer;
+  border-radius: 50%; border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  background: color-mix(in srgb, var(--card) 72%, transparent); color: var(--accent); font-size: 1.05rem; line-height: 1;
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow: 0 8px 22px -12px color-mix(in srgb, var(--ink) 55%, transparent);
+  transition: transform 0.15s ease, background-color 0.15s ease; animation: bc-pill 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+.bc-chip:hover { transform: scale(1.08); background: var(--card); }
+.bc-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* asked for, the field stands in the strip's place and the tools step aside */
+.cv-board .tlui-main-toolbar__tools { transition: opacity 0.18s ease, transform 0.18s ease; }
+.cv-board.bc-typing .tlui-main-toolbar__tools { opacity: 0; transform: translateY(6px); pointer-events: none; }
+.bc-bar { position: absolute; z-index: 470; box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; padding: 6px 7px 6px 18px;
+  border-radius: 999px; border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  background: color-mix(in srgb, var(--card) 68%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: 0 14px 34px -14px color-mix(in srgb, var(--ink) 55%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent);
+  animation: bc-pill 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes bc-pill { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.bc-spark { flex: none; font-size: 0.95rem; line-height: 1; color: var(--accent); }
+.bc-bar-field { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--ink);
+  font: 400 0.95rem/1.4 var(--font-display); }
+.bc-bar-field::placeholder { color: var(--muted); }
+.bc-bar-send { flex: none; width: 34px; height: 34px; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1rem; line-height: 1; display: grid; place-items: center;
+  transition: transform 0.12s ease, opacity 0.12s ease; }
+.bc-bar-send:hover:not(:disabled) { transform: scale(1.08); }
+.bc-bar-send:disabled { opacity: 0.4; cursor: default; }
+
+
+.bc-sheet { position: absolute; left: 0; right: 0; margin-inline: auto; bottom: 16px; z-index: 490;
+  width: min(900px, calc(100% - 28px)); height: min(64vh, 640px); display: flex; overflow: hidden;
+  border-radius: 24px; border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5); backdrop-filter: blur(26px) saturate(1.5);
+  box-shadow: 0 40px 90px -30px color-mix(in srgb, var(--ink) 72%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent);
+  animation: bc-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes bc-rise { from { opacity: 0; transform: translateY(102%); } to { opacity: 1; transform: translateY(0); } }
+.bc-sheet.bc-closing { pointer-events: none; animation: bc-sink 0.32s cubic-bezier(0.4, 0, 0.8, 0.3) forwards; }
+@keyframes bc-sink { to { opacity: 0; transform: translateY(102%); } }
+
+/* a faint themed wash, so the frost has a hint of the vibe's colour without a heavy tint */
+.bc-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: 0.2; }
+.bc-mesh::before { content: ""; position: absolute; inset: -40%; filter: blur(50px);
+  background:
+    radial-gradient(44% 44% at 28% 24%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 72%),
+    radial-gradient(46% 46% at 74% 30%, color-mix(in srgb, var(--acid) 55%, transparent), transparent 72%);
+  animation: bc-drift 40s ease-in-out infinite; }
+@keyframes bc-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); }
+  50% { transform: translate3d(3%, -2%, 0) scale(1.16); } }
+
+/* the light along the lower edge (SheetGlow, a canvas): behind the conversation, never in the way of a click */
+.bc-glow { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+.bc-sheet-in { position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.bc-head { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px 18px 8px; }
+.bc-grab { width: 44px; height: 5px; border: 0; padding: 0; border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--ink) 28%, transparent); position: absolute; left: 50%; top: 9px; translate: -50% 0; }
+.bc-grab:hover { background: color-mix(in srgb, var(--ink) 45%, transparent); }
+.bc-title { margin-left: 2px; font: 600 0.78rem/1 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.bc-list-toggle { margin-left: auto; border: 0; background: none; padding: 4px 6px; cursor: pointer;
+  font: 600 0.78rem/1 var(--font-display); color: var(--muted); }
+.bc-list-toggle:hover { color: var(--ink); }
+.bc-new { border: 0; background: none; padding: 4px 6px; cursor: pointer;
+  font: 600 0.78rem/1 var(--font-display); color: var(--accent); }
+.bc-close { border: 0; background: none; padding: 4px 2px; cursor: pointer; font: 400 1rem/1 var(--font-display); color: var(--muted); }
+.bc-close:hover { color: var(--ink); }
+
+/* the chats list: the saved conversations on this lesson */
+.bc-list-items { list-style: none; margin: 0; padding: 4px 0; display: flex; flex-direction: column; gap: 6px; }
+.bc-list-item { display: flex; align-items: stretch; gap: 4px; border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 30%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.bc-list-item:hover { background: color-mix(in srgb, var(--paper) 55%, transparent); }
+.bc-list-item.bc-current { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+.bc-list-open { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  border: 0; background: none; padding: 11px 14px; cursor: pointer; text-align: left; }
+.bc-list-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 500 0.94rem/1.3 var(--font-display); color: var(--ink); }
+.bc-list-meta { font: 400 0.76rem/1 var(--font-display); color: var(--muted); }
+.bc-list-remove { flex: none; align-self: center; border: 0; background: none; padding: 0 12px 0 4px; cursor: pointer;
+  font: 400 0.9rem/1 var(--font-display); color: var(--muted); opacity: 0; transition: opacity 0.15s ease, color 0.15s ease; }
+.bc-list-item:hover .bc-list-remove, .bc-list-remove:focus-visible { opacity: 1; }
+.bc-list-remove:hover { color: var(--ink); }
+
+.bc-thread { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 22px 6px; -webkit-user-select: text; user-select: text;
+  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 50%, transparent) transparent; scroll-behavior: smooth; }
+.bc-thread::-webkit-scrollbar { width: 11px; }
+.bc-thread::-webkit-scrollbar-track { background: transparent; }
+.bc-thread::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background-clip: padding-box;
+  background-color: color-mix(in srgb, var(--accent) 42%, transparent); transition: background-color 0.2s ease; }
+.bc-thread:hover::-webkit-scrollbar-thumb { background-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.bc-thread::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--accent) 82%, transparent); }
+/* while tokens stream, the thumb glows with the acid/pop accent to match the waveform */
+.bc-live .bc-thread::-webkit-scrollbar-thumb { background-color: color-mix(in srgb, var(--acid) 70%, transparent); }
+.bc-empty { max-width: 42ch; margin: 18px auto; text-align: center; font: 400 0.92rem/1.6 var(--font-display); color: var(--muted); }
+.bc-turn { margin: 0 0 18px; }
+.bc-turn .rd-turn { margin: 0; }
+.bc-turn .rd-q { display: inline-block; margin: 0 0 10px; padding: 8px 14px; border: 0; border-radius: 16px 16px 4px 16px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--ink); font-weight: 500; float: right; max-width: 85%; clear: both; }
+.bc-turn .rd-a { clear: both; }
+.bc-thread ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; }
+
+.bc-compose { flex: none; display: flex; align-items: flex-end; gap: 10px; padding: 10px 18px 16px; }
+.bc-field { flex: 1; min-height: 40px; max-height: 140px; resize: none; padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); border-radius: 18px; color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 38%, transparent); font: 400 0.92rem/1.45 var(--font-display); outline: none;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.bc-field::placeholder { color: var(--muted); }
+.bc-field:focus { border-color: var(--accent); }
+.bc-send { height: 40px; padding: 0 18px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--accent); color: #fff; font: 600 0.84rem/1 var(--font-display); }
+.bc-send:disabled { opacity: 0.4; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-bar, .bc-chip, .bc-sheet { animation: none; }
+  .bc-mesh::before { animation: none; }
+}
+/* ---- A narrated video on the board ("Watch", VideoView in components/canvas/shapes.tsx): the frame's bar, the picture,
+   a status line while it is being made, then the narration with the scene being spoken lit. ---- */
+.fr-video .fr-kind { background: var(--accent); color: #fff; }
+.cv-vid-frame { position: relative; flex: none; background: #fbf9f3; border-bottom: 2px solid var(--ink); }
+.cv-vid-still, .cv-vid-stage, .cv-vid-stage svg { display: block; width: 100%; height: 100%; }
+.cv-vid-still { position: relative; padding: 0; border: 0; background: none; cursor: pointer; }
+.cv-vid-play { position: absolute; left: 12px; bottom: 12px; display: grid; place-items: center; width: 38px; height: 38px; padding-left: 3px; border: 2px solid #19221f; border-radius: 50%;
+  background: var(--pop); color: var(--pop-ink); font-size: 0.9rem; box-shadow: 2px 2px 0 #19221f; }
+.cv-vid-wait { display: grid; place-items: center; height: 100%; color: #5b655f; font: 600 0.84rem/1.3 var(--font-display);
+  background: linear-gradient(100deg, #fbf9f3 40%, #efece1 50%, #fbf9f3 60%) 0 0 / 300% 100%; }
+.cv-vid-wait[aria-busy="true"] { animation: cv-vid-wait 1.4s linear infinite; }
+@keyframes cv-vid-wait { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.cv-vid-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: none; margin: 0; padding: 6px 14px; border-bottom: 1px solid var(--rule);
+  color: var(--muted); font: 500 0.74rem/1.3 var(--font-display); }
+.cv-vid-status button { flex: none; padding: 3px 9px; border: 1.5px solid var(--ink); border-radius: 999px; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.cv-vid-status button:hover { background: var(--ink); color: var(--card); }
+.cv-vid-lines { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 8px 10px; list-style: none; }
+.cv-vid-lines li { padding: 5px 8px; border-radius: 8px; color: var(--muted); font-size: 0.84rem; line-height: 1.4; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.cv-vid-lines li:hover { color: var(--ink); }
+.cv-vid-lines li.on { background: color-mix(in srgb, var(--pop) 70%, transparent); color: var(--pop-ink); }
+::highlight(cv-watch) { background-color: color-mix(in srgb, var(--accent, #234be7) 14%, transparent); color: inherit; text-decoration: underline; text-decoration-color: var(--accent, #234be7); }
+.cv-tag-watch { background: var(--ink); color: var(--paper); }
+.cv-pick .cv-watch { color: #a6b6ff; }
+@media (prefers-reduced-motion: reduce) { .cv-vid-wait[aria-busy="true"] { animation: none; } .cv-vid-lines li { transition: none; } }
